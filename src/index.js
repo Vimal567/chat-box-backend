@@ -1,42 +1,47 @@
-const mongoose = require("mongoose");
-const app = require("./app");
-const config = require("./config/config");
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const path = require('path');
+const connectDatabase = require('./config/connectDatabase');
+const { registerChatSockets } = require("./sockets/chat.socket");
 
-mongoose.set('strictQuery', true);//Mongoose: the `strictQuery` option will be switched back to `false` by default in Mongoose 7.
-let server;
-mongoose.connect(config.mongoose.url, config.mongoose.options).then(() => {
-    console.log("Connected to MongoDB");
-    server = app.listen(config.SERVER_PORT, () => {
-      console.log(`App is running on port ${config.SERVER_PORT}`);
-    });
-    return;
-})
-.catch((error) => {
-  console.log("error connecting to MongoDb:", error.message);
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../', '.env') });
+const port = process.env.PORT || 3000;
+
+// Initialize express app
+const app = express();
+connectDatabase();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// Default Route
+app.get('/', (req, res) => res.send("API is working!"));
+
+// API Routes
+const chats = require('./routes/chats.route');
+app.use('/api/chats', chats);
+
+// Create HTTP server to support both Express and Socket.IO
+const server = http.createServer(app);
+
+// Initialize Socket.IO with CORS configuration
+const io = socketIo(server, {
+  cors: {
+    origin: '*', // Change this to your frontend's URL
+    methods: ['GET', 'POST']
+  }
 });
 
-const exitHandler = () => {
-  if(server){
-    server.close(() => {
-      console.log("Server closed");
-      process.exit(1);
-    });
-  }else{
-    process.exit(1);
-  }
-}
+// Initialise Web Socket
+registerChatSockets(io);
 
-const unexpectedErrorHandler = (error) => {
-  console.log(error);
-  exitHandler();
-}
-
-process.on("uncaughtException", unexpectedErrorHandler);
-process.on("unhandledRejection", unexpectedErrorHandler);
-
-process.on("SIGTERM", () => {
-  console.log("SIGTERM received");
-  if (server) {
-    server.close();
-  }
+// Start the server
+server.listen(port, () => {
+  console.log(`Server started on port ${port}`);
 });

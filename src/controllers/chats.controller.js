@@ -1,41 +1,62 @@
-const httpStatus = require("http-status");
-const catchAsync = require("../utils/catchAsync");
 const chatsService = require("../services/chats.service");
 
-const getChats = catchAsync(async (req, res) => {
-    const all = await chatsService.getChats();
-    res.status(httpStatus.OK).send(all);
-});
+const getChats = async (req, res) => {
+    try {
+        const allChats = await chatsService.getChats();
+        res.status(200).send(allChats); // 200 OK
+    } catch (error) {
+        res.status(500).send({ message: error.message || "Internal Server Error" });
+    }
+};
 
-const chatByName = catchAsync(async (req, res) => {
-    const name = req.params;
-    const chat = await chatsService.chatByName(name);
-    res.status(httpStatus.OK).send(chat);
-});
+const chatByName = async (username) => {
+    try {
+        const chat = await chatsService.chatByName(username);
+        return chat;
+    } catch (error) {
+        return error.message;
+    }
+};
 
-const newChat = catchAsync(async (req, res) => {
-    const payload = req.body;
-    const posted = await chatsService.newChat(payload);
-    res.status(httpStatus.CREATED).send(posted);
-});
+const newChat = async (username) => {
+    try {
+        const chat = await chatsService.newChat({username});
+        return chat;
+    } catch (error) {
+        return error.message;
+    }
+};
 
-const updateChats = catchAsync(async (req, res) => {
-    const payload = req.body;
-    const posted = await chatsService.updateChats(payload);
-    res.status(httpStatus.CREATED).send(posted);
-});
+const addMessage = async (payload) => {
+    try {
+        await chatsService.addMessage(payload);
+        return "success";
+    } catch (error) {
+        return error.message;
+    }
+};
 
-const deleteUser = catchAsync(async (req, res) => {
-    const name = req.params;
-    const deleted = await chatsService.deleteUser(name);
-    res.status(httpStatus.OK).send(deleted);
-});
+const updateUsers = async (username) => {
+    try {
+        await chatsService.updateUsers(username);
+    } catch (error) {
+        return error.message;
+    }
+};
 
+const deleteUser = async (username) => {
+    try {
+        await chatsService.deleteUser(username);
+    } catch (error) {
+        res.status(500).send({ message: error.message || "Internal Server Error" });
+    }
+};
 
 module.exports = {
-  getChats,
-  chatByName,
-  newChat,
-  updateChats,
-  deleteUser
+    getChats,
+    chatByName,
+    newChat,
+    addMessage,
+    updateUsers,
+    deleteUser
 };

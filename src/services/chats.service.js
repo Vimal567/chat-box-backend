@@ -1,50 +1,72 @@
-const httpStatus = require("http-status");
-const ApiError = require("../utils/ApiError");
-const {Chats} = require("../models/chats.model");
+const Chats = require("../models/chats.model");
+const Users = require("../models/users.model");
 
 const getChats = async () => {
-    const all = await Chats.find({});
-    return all;
+    try {
+        const all = await Chats.find({});
+        return all;
+    } catch (error) {
+        throw new Error("Unable to retrieve chats");
+    }
 };
 
-const chatByName = async (name) => {
-    const found = await Chats.findOne(name);
-    if(found == null)
-        throw new ApiError(httpStatus.NOT_FOUND, "user not found");
-    return found;
+const chatByName = async (username) => {
+    try {
+        const found = await Chats.findOne({ username });
+        return found;
+    } catch (error) {
+        throw new Error(error.message || "An error occurred while fetching the chat");
+    }
 };
 
 const newChat = async (payload) => {
-    const data = new Chats(payload);
-    const saved = await data.save();
-    return saved;
+    try {
+        const data = new Chats(payload);
+        const saved = await data.save();
+        return saved;
+    } catch (error) {
+        throw new Error("Unable to save new chat");
+    }
 };
 
-const updateChats = async (payload) => {
-    const name = payload.name;
-    const {message} = payload;
-    const chat = await chatByName({name});
-    const oldMessage = chat.message;
-    chat.message = [];
-    chat.message = [...oldMessage,...message];
-    const saved = await chat.save();
-    return saved;
+const addMessage = async (payload) => {
+    try {
+        const { username, messageObj } = payload;
+        const chat = await chatByName(username);
+        const oldMessages = chat.messages;
+        chat.messages = [...oldMessages, messageObj];
+        const saved = await chat.save();
+        return saved;
+    } catch (error) {
+        throw new Error("Unable to update chat");
+    }
 };
 
-const deleteUser = async (name) => {
-    // Chats.collection.drop();
-    const found = await chatByName(name);
-    found.name = ""
-    found.message = []
-    await found.save()
-    await Chats.findOneAndRemove({name: ""})
+const updateUsers = async (username) => {
+    try {
+        // Create a new user document
+        const newUser = new Users({ user: username });
 
+        // Save the new user document
+        return await newUser.save();
+    } catch (error) {
+        throw new Error("Unable to update users: " + error.message);
+    }
+};
+
+const deleteUser = async (username) => {
+    try {
+        await Users.findOneAndDelete({ user: username });
+    } catch (error) {
+        throw new Error("Unable to delete user");
+    }
 };
 
 module.exports = {
     getChats,
     chatByName,
     newChat,
-    updateChats,
+    addMessage,
+    updateUsers,
     deleteUser
 };
