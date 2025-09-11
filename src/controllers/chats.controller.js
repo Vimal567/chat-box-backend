@@ -1,9 +1,9 @@
 const chatsService = require("../services/chats.service");
 
-const getChats = async (req, res) => {
+const getChats = async () => {
     try {
         const allChats = await chatsService.getChats();
-        res.status(200).send(allChats); // 200 OK
+        return allChats;
     } catch (error) {
         res.status(500).send({ message: error.message || "Internal Server Error" });
     }

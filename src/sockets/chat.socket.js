@@ -1,31 +1,36 @@
-const { chatByName, newChat, addMessage, updateUsers, deleteUser } = require("../controllers/chats.controller");
+const { chatByName, newChat, addMessage, updateUsers, deleteUser, getChats } = require("../controllers/chats.controller");
 
 function registerChatSockets(io) {
   io.on("connection", (socket) => {
 
     socket.on("join", async (username, callback) => {
-
       socket.username = username;
 
       try {
+        // Always update users list who are online
+        await updateUsers(username);
+
+        // Check if username is admin, if so send all chats data
+        if (username === "admin") {
+          const data = await getChats(username);
+          callback({ status: "success", data });
+          return;
+        }
+
         // Attempt to get data related to the username
         let data = await chatByName(username);
         if (!data) {
-          //If no data found create new chat
+          // If no data found, create new chat
           data = await newChat(username);
         }
 
-        //Update users list who are online
-        await updateUsers(username);
-
         callback({ status: "success", data });
       } catch (error) {
-        // If an error occurs, emit an "Error" event with the error message
+        // If an error occurs, emit a "failed" response with the error message
         callback({ status: "failed" });
-        console.error(error.messsage);
+        console.error(error.message); // fixed typo: was error.messsage
       }
     });
-
 
     // Receive message, persist, and broadcast
     socket.on("sendMessage", async (payload) => {
